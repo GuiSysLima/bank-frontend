@@ -104,7 +104,7 @@ const { user } = useUser();
         <Card sx={{ mb: 4, background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)', color: 'white' }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
-              Saldo Total Consolidado
+              Saldo Total
             </Typography>
             <Typography variant="h3" component="div" fontWeight="bold">
               {formatCurrency(totalBalance)}

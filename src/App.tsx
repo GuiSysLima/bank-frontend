@@ -4,7 +4,6 @@ import api from './api';
 import { useUser } from './contexts/UserContext';
 import { CompleteProfile } from './components/CompleteProfile';
 
-// 👇 IMPORTANTE: Importe o Dashboard do arquivo novo, e não use o local
 import { Dashboard } from './components/Dashboard'; 
 
 function App() {
@@ -36,8 +35,7 @@ function App() {
   if (!user) {
     return <CompleteProfile />;
   }
-
-  // 👇 Aqui ele vai renderizar o componente importado (o bonito com MUI)
+  
   return <Dashboard />; 
 }
 
