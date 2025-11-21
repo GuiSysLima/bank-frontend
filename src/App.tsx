@@ -1,5 +1,4 @@
-// Em src/App.tsx
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import keycloak from './keycloak';
 import api from './api';
 import { useUser } from './contexts/UserContext';
@@ -24,21 +23,20 @@ function App() {
   const { user, setUser, isLoading, setIsLoading } = useUser();
 
   useEffect(() => {
-    // 1. Função para checar o perfil no backend
     const checkUserProfile = async () => {
       try {
-        // 2. Chama o GET /users/me
+        
         const response = await api.get('/users/me');
         
-        // 3. (Cenário A) Usuário existe! Salva no context.
+        //(Cenário A) Usuário existe!
         setUser(response.data);
 
       } catch (error: any) {
-        // 4. (Cenário B) Usuário NÃO existe (404)
+        //(Cenário B) Usuário NÃO existe (404)
         if (error.response && error.response.status === 404) {
-          setUser(null); // Garante que está nulo
+          setUser(null);
         } else {
-          // Outro erro (500, etc)
+          //Outro erro (500, etc)
           console.error("Erro ao buscar perfil:", error);
         }
       } finally {
@@ -47,21 +45,18 @@ function App() {
     };
 
     checkUserProfile();
-  }, [setUser, setIsLoading]); // Roda apenas uma vez no load
+  }, [setUser, setIsLoading]);
 
   // --- Lógica de Renderização ---
 
-  // 1. Mostra "Carregando..." enquanto o Keycloak e o /users/me rodam
   if (isLoading) {
     return <div>Carregando...</div>;
   }
 
-  // 2. Se terminou de carregar E o usuário é nulo, mostra o formulário
   if (!user) {
     return <CompleteProfile />;
   }
 
-  // 3. Se terminou de carregar E o usuário existe, mostra o app principal
   return <Dashboard />;
 }
 
