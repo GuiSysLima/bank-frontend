@@ -10,7 +10,10 @@ interface UserCreateRequest {
 }
 
 export const CompleteProfile = () => {
-  const { setUser, setIsLoading } = useUser();
+  const { setUser } = useUser(); 
+
+  const [submitting, setSubmitting] = useState(false);
+  
   const [name, setName] = useState('');
   const [cpf, setCpf] = useState('');
   const [error, setError] = useState('');
@@ -18,38 +21,31 @@ export const CompleteProfile = () => {
   const emailFromToken = keycloak.tokenParsed?.email || '';
 
   const handleSubmit = async (e: React.FormEvent) => {
-
     e.preventDefault();
     setError('');
+    setSubmitting(true);
 
     const cleanCpf = cpf.replace(/\D/g, '');
 
     const userData: UserCreateRequest = {
       name,
-      cpf: cleanCpf, // Envia o CPF limpo independente do formato
+      cpf: cleanCpf,
       email: emailFromToken
     };
 
-    console.log("Enviando dados:", userData);
-
     try {
-      setIsLoading(true);
-
       const response = await api.post('/users', userData);
-
+      
       setUser(response.data); 
 
-      setIsLoading(false);
-
     } catch (err: any) {
-      console.error("Erro no cadastro:", err);
-      setIsLoading(false);
+      setSubmitting(false);
+      console.error('Erro no cadastro:', err);
 
       if (err.response && err.response.data && err.response.data.message) {
-
         setError(err.response.data.message);
       } else {
-        setError('Falha ao conectar com o servidor. Tente novamente.');
+        setError('Falha ao conectar com o servidor.');
       }
     }
   };
@@ -59,15 +55,15 @@ export const CompleteProfile = () => {
       <h2>Complete seu Perfil</h2>
       <p>Bem-vindo! Vimos que é seu primeiro acesso. Por favor, complete seu cadastro.</p>
       
-      {/* 4. Exibição do Erro VISÍVEL */}
       {error && (
         <div style={{ 
             backgroundColor: '#ffdddd', 
-            color: 'red', 
-            padding: '10px', 
-            marginBottom: '15px',
-            border: '1px solid red',
-            borderRadius: '4px'
+            color: '#d32f2f', 
+            padding: '15px', 
+            marginBottom: '20px',
+            border: '1px solid #d32f2f',
+            borderRadius: '4px',
+            fontWeight: 'bold'
         }}>
           {error}
         </div>
@@ -80,7 +76,8 @@ export const CompleteProfile = () => {
             type="text" 
             value={name} 
             onChange={(e) => setName(e.target.value)} 
-            required 
+            required
+            disabled={submitting} 
             style={{ width: '100%', padding: '8px' }}
           />
         </div>
@@ -91,6 +88,7 @@ export const CompleteProfile = () => {
             value={cpf} 
             onChange={(e) => setCpf(e.target.value)} 
             required 
+            disabled={submitting}
             placeholder="000.000.000-00"
             style={{ width: '100%', padding: '8px' }}
           />
@@ -107,9 +105,16 @@ export const CompleteProfile = () => {
         
         <button 
             type="submit"
-            style={{ padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', cursor: 'pointer' }}
+            disabled={submitting}
+            style={{ 
+                padding: '10px 20px', 
+                backgroundColor: submitting ? '#ccc' : '#007bff',
+                color: 'white', 
+                border: 'none', 
+                cursor: submitting ? 'not-allowed' : 'pointer' 
+            }}
         >
-            Salvar Perfil
+            {submitting ? 'Salvando...' : 'Salvar Perfil'}
         </button>
       </form>
     </div>
