@@ -1,9 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect , useMemo} from 'react';
 import api from '../api';
 import keycloak from '../keycloak';
 import { useUser } from '../contexts/UserContext';
 import { AccountType } from '../model/enums/AccountType';
 
+import{
+  AppBar, Toolbar, Typography, Button, Container, Card, CardContent,
+  CardActions, IconButton, Box, Dialog, DialogTitle, DialogContent,
+  DialogActions, FormControl, InputLabel, Select, MenuItem, Alert, CircularProgress
+} from '@mui/material';
+
+import Grid from '@mui/material/Grid';
+import LogoutIcon from '@mui/icons-material/Logout';
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import AddIcon from '@mui/icons-material/Add';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 
 interface Account {
   id: number;
@@ -13,13 +24,13 @@ interface Account {
 }
 
 export const Dashboard: React.FC = () => {
-  const { user } = useUser();
+const { user } = useUser();
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [newAccountType, setNewAccountType] = useState<AccountType>(AccountType.CHECKING_ACCOUNT);
-  
-  // Estados de UI
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [openModal, setOpenModal] = useState(false);
+  const [newAccountType, setNewAccountType] = useState<AccountType>(AccountType.CHECKING_ACCOUNT);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     api.get('/accounts')
@@ -34,113 +45,149 @@ export const Dashboard: React.FC = () => {
       });
   }, []);
 
-  const handleCreateAccount = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const totalBalance = useMemo(() => {
+      return accounts.reduce((acc, curr) => acc + curr.balance, 0);
+    }, [accounts]);
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+  };
+
+  const handleCreateAccount = async () => {
     setError(null);
-
+    setCreateLoading(true);
     try {
-      const request = { accountType: newAccountType };
-      
-      const response = await api.post('/accounts', request);
-      
+      const response = await api.post('/accounts', { accountType: newAccountType });
       setAccounts([...accounts, response.data]);
-      alert("Conta criada com sucesso!");
-
+      setOpenModal(false);
     } catch (err: any) {
-      console.error("Erro capturado:", err);
-
-      // --- LÓGICA DE TRATAMENTO DE ERRO ---
-      if (err.response && err.response.data && err.response.data.message) {
-        setError(err.response.data.message); 
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
       } else {
-        setError("Erro desconhecido ao comunicar com o servidor.");
+        setError("Erro ao criar conta.");
       }
+    } finally {
+      setCreateLoading(false);
     }
   };
 
-  if (loading) return <div>Carregando...</div>;
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+    <Box sx={{ flexGrow: 1, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       
-      {/* Cabeçalho */}
-      <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <h1>Olá, {user?.name}</h1>
-        <button onClick={() => keycloak.logout()} style={{ padding: '5px 10px' }}>
-          Sair
-        </button>
-      </header>
+      {/* --- BARRA SUPERIOR (NAVBAR) --- */}
+      <AppBar position="static">
+        <Toolbar>
+          <AccountBalanceIcon sx={{ mr: 2 }} />
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            UFAPE Bank
+          </Typography>
+          <Typography variant="body1" sx={{ mr: 2 }}>
+            Olá, {user?.name}
+          </Typography>
+          <Button color="inherit" onClick={() => keycloak.logout()} startIcon={<LogoutIcon />}>
+            Sair
+          </Button>
+        </Toolbar>
+      </AppBar>
 
-      {/* Bloco de Erro (Aparece só se tiver erro) */}
-      {error && (
-        <div style={{ 
-          backgroundColor: '#ffebee', 
-          color: '#c62828', 
-          border: '1px solid #ef9a9a', 
-          padding: '10px', 
-          borderRadius: '4px',
-          marginBottom: '20px' 
-        }}>
-          <strong>Atenção:</strong> {error}
-        </div>
-      )}
+      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+        
+        {/* --- RESUMO DO SALDO --- */}
+        <Card sx={{ mb: 4, background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)', color: 'white' }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Saldo Total Consolidado
+            </Typography>
+            <Typography variant="h3" component="div" fontWeight="bold">
+              {formatCurrency(totalBalance)}
+            </Typography>
+          </CardContent>
+        </Card>
 
-      {/* Lista de Contas */}
-      <section style={{ marginBottom: '30px' }}>
-        <h2>Minhas Contas</h2>
-        {accounts.length === 0 ? (
-          <p>Você não possui contas ativas.</p>
-        ) : (
-          <ul style={{ listStyle: 'none', padding: 0 }}>
-            {accounts.map(acc => (
-              <li key={acc.id} style={{ 
-                border: '1px solid #ddd', 
-                padding: '15px', 
-                marginBottom: '10px', 
-                borderRadius: '8px',
-                backgroundColor: '#f9f9f9'
-              }}>
-                <strong>{acc.accountType === AccountType.CHECKING_ACCOUNT ? 'Conta Corrente' : 'Poupança'}</strong>
-                <br />
-                <span style={{ color: '#666' }}>Nº: {acc.accountNumber}</span>
-                <br />
-                <strong style={{ fontSize: '1.2em', color: '#2e7d32' }}>
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(acc.balance)}
-                </strong>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <hr />
-
-      {/* Formulário de Criação */}
-      <section style={{ marginTop: '20px' }}>
-        <h3>Abrir Nova Conta</h3>
-        <form onSubmit={handleCreateAccount} style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <label>Tipo:</label>
-          <select 
-            value={newAccountType} 
-            onChange={(e) => setNewAccountType(e.target.value as AccountType)}
-            style={{ padding: '8px' }}
+        {/* --- TÍTULO E BOTÃO DE NOVA CONTA --- */}
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h5" component="h2" color="text.secondary">
+            Minhas Contas
+          </Typography>
+          <Button 
+            variant="contained" 
+            startIcon={<AddIcon />} 
+            onClick={() => setOpenModal(true)}
           >
-            <option value={AccountType.CHECKING_ACCOUNT}>Conta Corrente</option>
-            <option value={AccountType.SAVINGS_ACCOUNT}>Conta Poupança</option>
-          </select>
+            Nova Conta
+          </Button>
+        </Box>
+
+        {/* --- LISTA DE CONTAS (GRID) --- */}
+        <Grid container spacing={3}>
+          {accounts.length === 0 ? (
+            <Grid size={{ xs: 12 }}>
+              <Alert severity="info">Você ainda não possui contas. Clique em "Nova Conta" para começar.</Alert>
+            </Grid>
+          ) : (
+            accounts.map((account) => (
+              <Grid size={{ xs: 12, md: 6 }} key={account.id}>
+                <Card elevation={3}>
+                  <CardContent>
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <AccountBalanceWalletIcon color="primary" sx={{ mr: 1 }} />
+                      <Typography color="text.secondary" gutterBottom>
+                        {account.accountType === AccountType.CHECKING_ACCOUNT ? 'Conta Corrente' : 'Conta Poupança'}
+                      </Typography>
+                    </Box>
+                    <Typography variant="h5" component="div">
+                      {formatCurrency(account.balance)}
+                    </Typography>
+                    <Typography sx={{ mb: 1.5 }} color="text.secondary">
+                      Nº: {account.accountNumber}
+                    </Typography>
+                  </CardContent>
+                  <CardActions>
+                    <Button size="small">Ver Extrato</Button>
+                    <Button size="small" color="success">Depositar</Button>
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))
+          )}
+        </Grid>
+
+      </Container>
+
+      {/* --- MODAL DE CRIAR CONTA --- */}
+      <Dialog open={openModal} onClose={() => setOpenModal(false)}>
+        <DialogTitle>Abrir Nova Conta</DialogTitle>
+        <DialogContent sx={{ minWidth: 300, pt: 2 }}>
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
           
-          <button type="submit" style={{ 
-            padding: '8px 16px', 
-            backgroundColor: '#1976d2', 
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}>
-            Confirmar Abertura
-          </button>
-        </form>
-      </section>
-    </div>
+          <FormControl fullWidth sx={{ mt: 1 }}>
+            <InputLabel>Tipo de Conta</InputLabel>
+            <Select
+              value={newAccountType}
+              label="Tipo de Conta"
+              onChange={(e) => setNewAccountType(e.target.value as AccountType)}
+            >
+              <MenuItem value={AccountType.CHECKING_ACCOUNT}>Conta Corrente</MenuItem>
+              <MenuItem value={AccountType.SAVINGS_ACCOUNT}>Conta Poupança</MenuItem>
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenModal(false)}>Cancelar</Button>
+          <Button onClick={handleCreateAccount} variant="contained" disabled={createLoading}>
+            {createLoading ? 'Criando...' : 'Confirmar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+    </Box>
   );
 };
