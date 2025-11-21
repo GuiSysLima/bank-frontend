@@ -1,12 +1,10 @@
 import axios from 'axios';
 import keycloak from './keycloak';
 
-// 1. Cria a instância do axios
 const api = axios.create({
-  baseURL: 'http://localhost:8080' // Sua API Spring Boot
+  baseURL: 'http://localhost:8080'
 });
 
-// 2. Interceptor (o código é o mesmo)
 api.interceptors.request.use(
   (config) => {
     if (keycloak.authenticated && keycloak.token) {
