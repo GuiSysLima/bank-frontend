@@ -1,5 +1,4 @@
-import React, { useEffect } from 'react';
-import keycloak from './keycloak';
+import { useEffect } from 'react';
 import api from './api';
 import { useUser } from './contexts/UserContext';
 import { CompleteProfile } from './components/CompleteProfile';
