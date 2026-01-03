@@ -1,6 +1,6 @@
 # bank-frontend
 
-Frontend web to [Bank API](https://github.com/GuiSysLima/bank-api)
+Frontend web for [Bank API](https://github.com/GuiSysLima/bank-api)
 
 
 ## 🛠️ Developed w/
